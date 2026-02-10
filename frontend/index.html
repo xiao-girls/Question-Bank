@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>题库生成系统</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #555;
+      margin-bottom: 20px;
+    }
+    h3 {
+      color: #666;
+      margin: 20px 0 10px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    .tabs button {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #666;
+      border-radius: 4px;
+      transition: all 0.3s;
+    }
+    .tabs button.active {
+      background: #1890ff;
+      color: white;
+    }
+    .tabs button:hover:not(.active) {
+      background: #f0f0f0;
+    }
+    .tab-content {
+      padding: 20px 0;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #1890ff;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #40a9ff;
+    }
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #52c41a;
+      color: white;
+    }
+    .btn-danger {
+      background: #ff4d4f;
+      color: white;
+    }
+    .kb-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .kb-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .question-item {
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      background: #fafafa;
+    }
+    .question-header {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .q-type {
+      background: #1890ff;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    .q-difficulty {
+      background: #52c41a;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    .q-answer {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 4px;
+      color: #333;
+      border-left: 3px solid #52c41a;
+    }
+    .q-explanation {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 4px;
+      color: #333;
+      border-left: 3px solid #faad14;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>题库生成系统</h1>
+    
+    <div class="tabs">
+      <button id="tab-model" class="active" onclick="switchTab('model')">模型配置</button>
+      <button id="tab-knowledge" onclick="switchTab('knowledge')">知识库管理</button>
+      <button id="tab-generate" onclick="switchTab('generate')">生成题目</button>
+    </div>
+
+    <div class="tab-content">
+      <div id="panel-model" class="tab-panel">
+        <h2>模型配置</h2>
+        <div class="form-group">
+          <label>模型类型</label>
+          <select id="modelType">
+            <option value="ollama">Ollama</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Base URL</label>
+          <input id="baseUrl" value="http://localhost:11434" />
+        </div>
+        <div class="form-group hidden" id="apiKeyGroup">
+          <label>API Key</label>
+          <input id="apiKey" type="password" placeholder="输入 API Key" />
+        </div>
+        <div class="form-group">
+          <label>模型名称</label>
+          <input id="modelName" value="qwen3:1.7b" />
+        </div>
+        <button onclick="saveModelConfig()" class="btn-primary">保存配置</button>
+      </div>
+
+      <div id="panel-knowledge" class="tab-panel hidden">
+        <h2>知识库管理</h2>
+        <div class="form-group">
+          <label>知识库名称</label>
+          <input id="kbName" placeholder="输入知识库名称" />
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <input id="kbDescription" placeholder="输入描述" />
+        </div>
+        <button onclick="createKnowledgeBase()" class="btn-primary">创建知识库</button>
+
+        <div class="kb-list" style="margin-top: 30px;">
+          <h3>已有知识库</h3>
+          <div id="kbList"></div>
+        </div>
+
+        <div id="kbDetail" class="hidden" style="margin-top: 30px; padding: 20px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;">
+          <h3>知识库详情</h3>
+          <div style="margin-bottom: 20px;">
+            <button onclick="closeKbDetail()" class="btn-secondary">返回列表</button>
+          </div>
+          <div class="form-group">
+            <label>知识库名称</label>
+            <input id="editKbName" placeholder="输入知识库名称" />
+          </div>
+          <div class="form-group">
+            <label>描述</label>
+            <input id="editKbDescription" placeholder="输入描述" />
+          </div>
+          <div class="form-group">
+            <label>文件列表</label>
+            <div id="fileList"></div>
+          </div>
+          <div style="margin-top: 20px;">
+            <button onclick="updateKnowledgeBase()" class="btn-primary">保存修改</button>
+            <button onclick="deleteKnowledgeBaseDetail()" class="btn-danger" style="margin-left: 10px;">删除知识库</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-generate" class="tab-panel hidden">
+        <h2>生成题目</h2>
+        <div class="form-group">
+          <label>选择知识库</label>
+          <select id="generateKbId">
+            <option value="">请选择知识库</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>关键词</label>
+          <input id="generateKeyword" placeholder="输入关键词" />
+        </div>
+        <div class="form-group">
+          <label>题目类型</label>
+          <select id="generateQuestionType">
+            <option value="single_choice">单选题</option>
+            <option value="multiple_choice">多选题</option>
+            <option value="fill">填空题</option>
+            <option value="essay">问答题</option>
+            <option value="true_false">判断题</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>难度</label>
+          <select id="generateDifficulty">
+            <option value="easy">简单</option>
+            <option value="medium">中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>题目数量</label>
+          <input type="number" id="generateCount" value="5" min="1" max="20" />
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+          <button onclick="generateQuestions()" class="btn-primary" id="generateBtn">生成题目</button>
+          <button onclick="exportQuestions()" class="btn-secondary" style="display: none;" id="exportBtn">导出为 Word 文档</button>
+        </div>
+        <div id="questionsResult" style="margin-top: 30px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8000/api';
+    let generatedQuestions = [];
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).classList.add('active');
+      
+      if (tab === 'knowledge') loadKnowledgeBases();
+      if (tab === 'generate') loadKnowledgeBasesForGenerate();
+    }
+
+    document.getElementById('modelType').addEventListener('change', function() {
+      document.getElementById('apiKeyGroup').classList.toggle('hidden', this.value !== 'deepseek');
+    });
+
+    async function saveModelConfig() {
+      try {
+        await fetch(`${API_BASE}/model/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model_type: document.getElementById('modelType').value,
+            base_url: document.getElementById('baseUrl').value,
+            api_key: document.getElementById('apiKey').value || null,
+            model_name: document.getElementById('modelName').value
+          })
+        });
+        alert('模型配置已保存');
+      } catch (error) {
+        alert('保存失败: ' + error.message);
+      }
+    }
+
+    let currentKbId = '';
+
+    async function loadKnowledgeBases() {
+      try {
+        const response = await fetch(`${API_BASE}/knowledge`);
+        const data = await response.json();
+        const kbList = document.getElementById('kbList');
+        
+        if (data.knowledge_bases.length === 0) {
+          kbList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">暂无知识库，请创建一个新的知识库</div>';
+          return;
+        }
+        
+        kbList.innerHTML = data.knowledge_bases.map(kb => `
+          <div class="kb-item">
+            <div class="kb-info">
+              <strong>${kb.name}</strong>
+              <p>${kb.description}</p>
+              <small>文件数: ${kb.files.length}</small>
+            </div>
+            <div class="kb-actions">
+              <label class="btn-secondary">
+                上传文件
+                <input type="file" onchange="uploadFile('${kb.id}', this)" hidden />
+              </label>
+              <button onclick="viewKnowledgeBase('${kb.id}')" class="btn-primary">查看详情</button>
+              <button onclick="deleteKnowledgeBase('${kb.id}')" class="btn-danger">删除</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('加载知识库失败:', error);
+        document.getElementById('kbList').innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4d4f;">加载失败，请刷新页面重试</div>';
+      }
+    }
+
+    async function viewKnowledgeBase(kbId) {
+      try {
+        const response = await fetch(`${API_BASE}/knowledge/${kbId}`);
+        if (!response.ok) {
+          throw new Error('获取知识库详情失败');
+        }
+        const kb = await response.json();
+        
+        currentKbId = kbId;
+        
+        // 显示详情面板，隐藏列表
+        document.querySelector('.kb-list').classList.add('hidden');
+        document.getElementById('kbDetail').classList.remove('hidden');
+        
+        // 填充表单数据
+        document.getElementById('editKbName').value = kb.name;
+        document.getElementById('editKbDescription').value = kb.description;
+        
+        // 显示文件列表
+        const fileList = document.getElementById('fileList');
+        if (kb.files.length === 0) {
+          fileList.innerHTML = '<div style="padding: 10px; background: #f5f5f5; border-radius: 4px; text-align: center; color: #666;">暂无文件</div>';
+        } else {
+          fileList.innerHTML = kb.files.map(file => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+              <span>${file}</span>
+              <button onclick="deleteFile('${kbId}', this.getAttribute('data-filename'))" data-filename="${file}" class="btn-danger" style="padding: 4px 8px; font-size: 12px;">删除</button>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('查看知识库详情失败:', error);
+        alert('查看知识库详情失败: ' + error.message);
+      }
+    }
+
+    function closeKbDetail() {
+      // 隐藏详情面板，显示列表
+      document.getElementById('kbDetail').classList.add('hidden');
+      document.querySelector('.kb-list').classList.remove('hidden');
+      currentKbId = '';
+    }
+
+    async function updateKnowledgeBase() {
+      if (!currentKbId) return;
+      
+      try {
+        await fetch(`${API_BASE}/knowledge/${currentKbId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('editKbName').value,
+            description: document.getElementById('editKbDescription').value
+          })
+        });
+        
+        alert('知识库更新成功');
+        loadKnowledgeBases();
+        closeKbDetail();
+      } catch (error) {
+        console.error('更新知识库失败:', error);
+        alert('更新知识库失败: ' + error.message);
+      }
+    }
+
+    async function deleteKnowledgeBaseDetail() {
+      if (!currentKbId) return;
+      
+      if (!confirm('确定要删除这个知识库吗？')) return;
+      
+      try {
+        await fetch(`${API_BASE}/knowledge/${currentKbId}`, { method: 'DELETE' });
+        alert('知识库已删除');
+        loadKnowledgeBases();
+        closeKbDetail();
+      } catch (error) {
+        console.error('删除知识库失败:', error);
+        alert('删除知识库失败: ' + error.message);
+      }
+    }
+
+    async function deleteFile(kbId, filename) {
+      if (!confirm('确定要删除这个文件吗？')) return;
+      
+      try {
+        await fetch(`${API_BASE}/knowledge/${kbId}/files/${encodeURIComponent(filename)}`, {
+          method: 'DELETE'
+        });
+        
+        alert('文件删除成功');
+        viewKnowledgeBase(kbId);
+      } catch (error) {
+        console.error('删除文件失败:', error);
+        alert('删除文件失败: ' + error.message);
+      }
+    }
+
+    async function createKnowledgeBase() {
+      try {
+        await fetch(`${API_BASE}/knowledge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('kbName').value,
+            description: document.getElementById('kbDescription').value
+          })
+        });
+        document.getElementById('kbName').value = '';
+        document.getElementById('kbDescription').value = '';
+        loadKnowledgeBases();
+        alert('知识库创建成功');
+      } catch (error) {
+        alert('创建失败: ' + error.message);
+      }
+    }
+
+    async function uploadFile(kbId, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        await fetch(`${API_BASE}/knowledge/${kbId}/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        loadKnowledgeBases();
+        alert('文件上传成功');
+      } catch (error) {
+        alert('上传失败: ' + error.message);
+      }
+    }
+
+    async function deleteKnowledgeBase(kbId) {
+      if (!confirm('确定要删除这个知识库吗？')) return;
+
+      try {
+        await fetch(`${API_BASE}/knowledge/${kbId}`, { method: 'DELETE' });
+        loadKnowledgeBases();
+        alert('知识库已删除');
+      } catch (error) {
+        alert('删除失败: ' + error.message);
+      }
+    }
+
+    async function loadKnowledgeBasesForGenerate() {
+      try {
+        const response = await fetch(`${API_BASE}/knowledge`);
+        const data = await response.json();
+        const select = document.getElementById('generateKbId');
+        select.innerHTML = '<option value="">请选择知识库</option>' + 
+          data.knowledge_bases.map(kb => `<option value="${kb.id}">${kb.name}</option>`).join('');
+      } catch (error) {
+        console.error('加载知识库失败:', error);
+      }
+    }
+
+    async function generateQuestions() {
+      const kbId = document.getElementById('generateKbId').value;
+      const keyword = document.getElementById('generateKeyword').value;
+      
+      if (!kbId) {
+        alert('请选择知识库');
+        return;
+      }
+      if (!keyword) {
+        alert('请输入关键词');
+        return;
+      }
+
+      // 隐藏导出按钮
+      document.getElementById('exportBtn').style.display = 'none';
+      
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+
+      try {
+        const response = await fetch(`${API_BASE}/questions/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kb_id: kbId,
+            keyword: keyword,
+            question_type: document.getElementById('generateQuestionType').value,
+            difficulty: document.getElementById('generateDifficulty').value,
+            count: parseInt(document.getElementById('generateCount').value)
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || '生成失败');
+        }
+
+        const data = await response.json();
+        displayQuestions(data.questions);
+      } catch (error) {
+        alert('生成失败: ' + error.message);
+        document.getElementById('questionsResult').innerHTML = '<div style="padding: 20px; text-align: center; color: #ff4d4f;">生成失败: ' + error.message + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成题目';
+      }
+    }
+
+    function displayQuestions(questions) {
+      const typeNames = { single_choice: '单选题', multiple_choice: '多选题', fill: '填空题', essay: '问答题', true_false: '判断题' };
+      const diffNames = { easy: '简单', medium: '中等', hard: '困难' };
+      
+      // 存储生成的题目
+      generatedQuestions = questions;
+      
+      // 显示导出按钮
+      document.getElementById('exportBtn').style.display = questions.length > 0 ? 'inline-block' : 'none';
+      
+      document.getElementById('questionsResult').innerHTML = `
+        <h3>生成的题目</h3>
+        ${questions.map((q, i) => `
+          <div class="question-item">
+            <div class="question-header">
+              <span class="q-number">${i + 1}.</span>
+              <span class="q-type">${typeNames[q.type]}</span>
+              <span class="q-difficulty">${diffNames[q.difficulty]}</span>
+            </div>
+            <p class="q-content">${q.question}</p>
+            ${q.options ? `<div class="q-options">${q.options.map((opt, j) => `<div>${String.fromCharCode(65 + j)}. ${opt}</div>`).join('')}</div>` : ''}
+            <div class="q-answer"><strong>答案:</strong> ${q.answer}</div>
+            ${q.explanation ? `<div class="q-explanation"><strong>解析:</strong> ${q.explanation}</div>` : ''}
+          </div>
+        `).join('')}
+      `;
+    }
+
+    async function exportQuestions() {
+      if (generatedQuestions.length === 0) {
+        alert('没有可导出的题目');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/questions/export`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            questions: generatedQuestions,
+            title: '题库导出'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('导出失败');
+        }
+
+        // 获取文件名
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = '题库导出.docx';
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="([^"]+)"/);
+          if (match) {
+            filename = match[1];
+          }
+        }
+
+        // 下载文件
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        alert('导出成功');
+      } catch (error) {
+        alert('导出失败: ' + error.message);
+      }
+    }
+
+    loadKnowledgeBases();
+  </script>
+</body>
+</html>
