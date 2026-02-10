@@ -45,7 +45,7 @@ class QuestionGenerator:
     ) -> List[Question]:
         try:
             logger.info(f"开始生成题目: 关键词={keyword}, 类型={question_type}, 难度={difficulty}, 数量={count}")
-            logger.debug(f"知识库内容长度: {len(knowledge_content)}")
+            logger.info(f"知识库内容长度: {len(knowledge_content)}")
             
             prompt = self._build_prompt(
                 knowledge_content, keyword, question_type, difficulty, count
@@ -53,10 +53,14 @@ class QuestionGenerator:
             logger.info(f"生成的提示词长度: {len(prompt)}")
             # 创建不包含知识库内容的提示词副本用于日志打印
             prompt_for_log = prompt.replace(knowledge_content[:3000], "[知识库内容已省略]")
-            logger.info(f"提示词内容:\n{prompt_for_log}")
+            logger.info(f"提示词内容(已省略知识库):\n{prompt_for_log}")
+            # 打印完整的提示词内容
+            logger.debug(f"完整提示词内容(上传给大模型):\n{prompt}")
 
             response = await self.model_client.generate(prompt)
-            logger.debug(f"模型响应长度: {len(response)}")
+            logger.info(f"模型响应长度: {len(response)}")
+            # 打印模型响应内容
+            logger.info(f"模型响应内容:\n{response}")
             
             questions = self._parse_questions(response, question_type)
             logger.info(f"成功生成题目数量: {len(questions)}")
